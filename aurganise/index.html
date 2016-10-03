@@ -1,0 +1,439 @@
+<!doctype html>
+<html>
+<head>
+    <title>aurganise</title>
+    <meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, minimum-scale=1, maximum-scale=1" />
+    <meta name="apple-mobile-web-app-capable" content="yes">
+</head>
+<style>
+* {
+margin: 0;
+padding: 0;
+}
+
+button {
+    background: none;
+    border: none;
+    font-family: Arial;
+    height: 34px;
+    width: 34px;
+    line-height: 34px;
+    font-size: 34px;
+    cursor: pointer;
+    outline: none;
+}
+.deck {
+    line-height: 34px;
+    font-size: 34px;
+    padding: 0px 5px;
+    cursor: pointer;
+}
+
+header, footer {
+    position: fixed;
+    width: 100%;
+    height: 34px;
+    z-index: 10;
+    background: #eee;
+}
+header {
+    top: 0px;
+}
+footer {
+    bottom: 0px;
+}
+
+main {
+    position: absolute;
+    top: 34px;
+    bottom: 34px;
+    left: 0px;
+    width: 100%;
+    overflow-y: auto;
+}
+main > ul > li {
+    position: relative;
+    margin: 5px;
+    padding: 2px 5px;
+    list-style-type: none;
+    outline: none; // no default indication of edition
+    cursor: auto;
+    white-space: pre-wrap;
+    border-style: solid;
+    border-width: 0px 0px 0px 3px;
+    background-color: #fafafa;
+}
+main > ul > li:focus {
+    background-color: #eee;
+}
+</style>
+<script>
+
+var PubSub = {};
+(function(p) {
+    var subscriptions = {};
+    p.subscribe = function(topic, context, callback) {
+        topics = topic.split(/\s/);
+        for (var i=0; i<topics.length; i++) {
+            topic = topics[i];
+            if (!subscriptions[topic]) subscriptions[topic] = [];
+            subscriptions[topic].push({context: context, callback: callback});
+        }
+        return callback;
+    };
+    p.unsubscribe = function(topic, context, callback) {
+        topics = topic.split(/\s/);
+        for (var i=0; i<topics.length; i++) {
+            topic = topics[i];
+            if (!subscriptions[topic]) return;
+            var l = subscriptions[topic].length;
+            while (l--)
+                if (subscriptions[topic][l].context === context)
+                    if (subscriptions[topic][l].callback === callback)
+                        subscription[topic].splice(l,1);
+        }
+    };
+    p.publish = function(topic) {
+        var args = Array.prototype.slice.call(arguments, 1);
+        if (!subscriptions[topic]) return true;
+        for (var i=0; i<subscriptions[topic].length; i++) {
+            subscriptions[topic][i].callback.apply(subscriptions[topic][i].context, args);
+        }
+        return true;
+    };
+}(PubSub));
+
+function Item() {
+    this.date = (new Date()).getTime();
+    this.text = "New item";
+}
+
+function Deck() {
+    Deck.count = (Deck.count || 0) + 1;
+    this.name = "Deck" + Deck.count;
+    this.items = [];
+    if (arguments[0]) {
+        if (typeof arguments[0] === "string") {
+            this.name = arguments[0];
+        } else {
+            this.name = arguments[0].name;
+            var l = arguments[0].items.length
+            while (l--)
+                this.addItem(0, arguments[0].items[l]);
+        }
+    }
+}
+Deck.prototype.addItem = function(index, item) {
+    this.items.splice(index, 0, item);
+}
+Deck.prototype.modItem = function(index, text) {
+    this.items[index].text = text;
+}
+Deck.prototype.remItem = function(index) {
+    this.items.splice(index, 1);
+}
+
+var Model = {
+    decks: [],
+    deck: null,
+    init: function() {
+        if (Store.get("aurganise-deckList"))
+            for (var i=0; i<JSON.parse(Store.get("aurganise-deckList")).length; i++)
+                this.decks.push(new Deck(JSON.parse(Store.get("aurganise-" + JSON.parse(Store.get("aurganise-deckList"))[i]))));
+        else
+            this.decks = [new Deck()];
+        this.deck = this.decks[0];
+        PubSub.publish("deck", "init", this.deck, this.decks);
+    },
+    newDeck: function() {
+        var name = (window.prompt("Name of the new deck:")||"").replace(/^\s+|\s+$/gm, '');
+        if (!name) return;
+        this.decks.push(new Deck(name));
+        this.deck = this.decks[this.decks.length - 1];
+        PubSub.publish("deck", "load", this.deck, this.decks);
+    },
+    loadDeck: function(deck) {
+        var l = this.decks.length;
+        while (l--) {
+            if (deck.name == this.decks[l].name) {
+                this.deck = deck;
+                PubSub.publish("deck", "load", this.deck, this.decks);
+                break;
+            }
+        }
+    },
+    newItem: function() {
+        this.addItem(0, new Item());
+    },
+    addItem: function(index, item) {
+        this.deck.addItem(index, item);
+        PubSub.publish("item", "add", index, this.deck);
+    },
+    modItem: function(index, text) {
+        this.deck.modItem(index, text);
+        PubSub.publish("item", "mod", index, this.deck);
+    },
+    remItem: function(index) {
+        this.deck.remItem(index);
+        PubSub.publish("item", "rem", index, this.deck);
+    }
+};
+
+var tabModel = {
+    names: [],
+    load: function(list) {
+        var l = list.length;
+        while (l--)
+            this.names.shift(list[l]);
+    }
+}
+
+var Logger = {
+    log: function() {
+        //console.log("[log] " + Array.prototype.join.call(arguments, ", "));
+        console.log("[log] " + Array.prototype.map.call(arguments, JSON.stringify).join(", "));
+    }
+};
+
+var History = {
+    currentIndex: 0
+};
+
+var Store = {
+    available: (function(){
+        var t = "a";
+        try {
+            localStorage.setItem(t,t);
+            localStorage.removeItem(t);
+            return true;
+        } catch (e) {
+            return false;
+        }
+    })(),
+    set: function(key, value) {
+        if (!this.available) return;
+        localStorage.setItem(key, JSON.stringify(value));
+    },
+    get: function(key) {
+        if (!this.available) return;
+        return localStorage.getItem(key);
+    },
+    updateDeck: function() {
+        
+    },
+    updateItem: function() {
+        switch (arguments[0]) {
+        case "add":
+        case "mod":
+        case "rem":
+            var deck = arguments[arguments.length-1];
+            this.set("aurganise-"+deck.name, deck);
+            if (JSON.parse(this.get("aurganise-deckList")).indexOf(deck.name) === -1)
+                this.set("aurganise-deckList", JSON.parse(this.get("aurganise-deckList")).concat(deck.name));
+            break;
+        }
+    }
+};
+
+var View = {
+    deselectAll: function() {
+        if (document.selection)
+            document.selection.empty();
+        if (window.getSelection())
+            window.getSelection().removeAllRanges();
+    },
+    addItem: function(index, item) {
+        var ul = document.getElementById('deck'),
+            li = document.createElement('li');
+        li.contentEditable = "true";
+        li.innerHTML = item.text;
+        li.title = (function(d){function z(n){return n<10?'0'+n:n;};return z(d.getDate())+'/'+z(d.getMonth()+1)+'/'+d.getFullYear()+' '+z(d.getHours())+':'+z(d.getMinutes());})(new Date(item.date));
+        if (index < ul.children.length)
+            ul.insertBefore(li, ul.children[index]);
+        else
+            ul.appendChild(li);
+        if (index === 0)
+            ul.parentNode.scrollTop = 0;
+    },
+    remItem: function(index) {
+        var ul = document.getElementById('deck');
+        ul.removeChild(ul.childNodes[index]);
+    },
+    refresh: function(deck, decks) {
+        var l = decks.length;
+        while (document.getElementById('newDeck').nextSibling)
+            document.getElementById('newDeck').parentNode.removeChild(document.getElementById('newDeck').nextSibling)
+        while (l--) {
+            var span = document.createElement('span');
+            span.className = "deck";
+            span.innerHTML = decks[l].name;
+            document.getElementById('footer').insertBefore(span, document.getElementById('newDeck').nextSibling);
+        }
+        var l = deck.items.length;
+        document.getElementById('deck').innerHTML = "";
+        while (l--)
+            this.addItem(0, deck.items[l]);
+    },
+    updateDeck: function() {
+        switch (arguments[0]) {
+        case "init":
+        case "load":
+            this.refresh(arguments[1], arguments[2]);
+            break;
+        }
+    },
+    updateItem: function() {
+        switch (arguments[0]) {
+        case "add":
+            this.addItem(arguments[1], arguments[2].items[arguments[1]]);
+            break;
+        case "mod":
+            this.remItem(arguments[1]);
+            this.addItem(arguments[1], arguments[2].items[arguments[1]]);
+            break;
+        case "rem":
+            this.remItem(arguments[1]);
+            break;
+        }
+    }
+};
+
+var Controller = {
+    newDeck: function() {
+        Model.newDeck();
+    },
+    loadDeck: function(deckName) {
+        Model.loadDeck(new Deck(JSON.parse(Store.get("aurganise-" + deckName))));
+    },
+    newItem: function() {
+        Model.newItem();
+    },
+    modItem: function(index, text) {
+        if (text !== Model.deck.items[index].text)
+            Model.modItem(index, text);
+        else
+            View.deselectAll();
+    },
+    remItem: function(index) {
+        Model.remItem(index);
+    }
+};
+
+function start() {
+    PubSub.subscribe("deck", Store, Store.updateDeck);
+    PubSub.subscribe("deck", View, View.updateDeck);
+    PubSub.subscribe("deck", Logger, Logger.log);
+    PubSub.subscribe("item", Store, Store.updateItem);
+    PubSub.subscribe("item", View, View.updateItem);
+    PubSub.subscribe("item", Logger, Logger.log);
+    
+    /* INIT */
+    if (!Store.get("aurganise-version"))
+        Store.set("aurganise-version", 0.1);
+    /*if (!Store.get("aurganise-deckList"))
+        Store.set("aurganise-deckList", []);
+    if (Store.get("aurganise-deckList").length > 2)
+        Model.load(new Deck(JSON.parse(Store.get("aurganise-" + JSON.parse(Store.get("aurganise-deckList"))[0]))));
+    */
+    Model.init();
+    
+    document.addEventListener("contextmenu", function(e) {
+        e.preventDefault();
+    }, true);
+    document.addEventListener("mousedown", function(e) {
+        var target = e.target;
+        switch (target.nodeName) {
+        case "SPAN":
+            if ((e.which && e.which == 3) || (e.button && e.button == 2)) {
+                //e.preventDefault();
+            }
+            break;
+        }
+    }, true);
+    document.addEventListener("click", function(e) {
+        var target = e.target;
+        switch (target.id) {
+        case "newItem":
+            Controller.newItem();
+            break;
+        case "newDeck":
+            Controller.newDeck();
+            break;
+        }
+        switch (target.nodeName) {
+        case "LI":
+            
+            break;
+        case "SPAN":
+            if ((e.which && e.which == 3) || (e.button && e.button == 2)) {
+            } else {
+                Controller.loadDeck(target.textContent);
+            }
+            break;
+        }
+    }, true);
+    document.addEventListener("blur", function(e) {
+        var target = e.target;
+        switch (target.nodeName) {
+        case "LI":
+            index = Array.prototype.slice.call(document.getElementById('deck').children).indexOf(target);
+            if (target.textContent !== "")
+                Controller.modItem(index, target.textContent.replace(/\s+$/gm, ''));
+            else
+                Controller.remItem(index);
+            break;
+        }
+    }, true);
+    window.addEventListener("focus", function(e) {
+        document.activeElement.blur();
+    }, false);
+    document.addEventListener("paste", function(e) {
+        var target = e.target;
+        // secure firing when in a node in a li
+        switch (target.nodeName) {
+        case "LI":
+            e.preventDefault();
+            var text = e.clipboardData.getData("text/plain").replace(/\s+$/gm, '');
+            //console.log(text);
+            document.execCommand('insertHTML', false, text); // insertText doesn't work well... :/
+            break;
+        }
+    }, true);
+    document.addEventListener("keydown", function(e) {
+        var target = e.target;
+        if (target.nodeName !== "LI") { // outside of an item
+            if (e.keyCode === 107 || (e.shiftKey && e.keyCode === 187)) { // +
+                Controller.newItem();
+                e.preventDefault();
+            }
+            if (e.keyCode === 65 && (e.ctrlKey || e.metaKey)) // Ctrl+A
+                e.preventDefault();
+        } else { // in an item
+            if (e.keyCode === 13 && !e.shiftKey) {// Enter
+                target.blur();
+                e.preventDefault();
+            }
+        }
+    }, true);
+}
+window.addEventListener("load",start,false);
+</script>
+<body spellcheck='false'>
+
+<header>
+<button id="newItem">+</button><button id="undo"><</button><button id="redo">></button>
+</header>
+
+<main>
+<ul id="deck">
+</ul>
+</main>
+
+<footer id="footer">
+<button id="newDeck">+</button>
+</footer>
+
+</body>
+</html>
