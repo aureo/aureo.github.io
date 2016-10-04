@@ -138,14 +138,12 @@ Deck.prototype.remItem = function(index) {
 var Model = {
     decks: [],
     deck: null,
-    init: function() {
+    init: function() { // REMOVE Store FROM Model!!!
         if (Store.get("aurganise-deckList"))
             for (var i=0; i<JSON.parse(Store.get("aurganise-deckList")).length; i++)
                 this.decks.push(new Deck(JSON.parse(Store.get("aurganise-" + JSON.parse(Store.get("aurganise-deckList"))[i]))));
-        else {
+        else
             this.decks = [new Deck()];
-            console.log("no decklist in memory");
-        }
         this.deck = this.decks[0];
         PubSub.publish("deck", "init", this.deck, this.decks);
     },
@@ -335,9 +333,11 @@ function start() {
     if (!Store.get("aurganise-version"))
         Store.set("aurganise-version", 0.1);
     if (!Store.get("aurganise-deckList"))
-        Store.set("aurganise-deckList", []);
+        Store.set("aurganise-deckList", ["Deck1"]);
+    /*
     if (Store.get("aurganise-deckList").length > 2)
         Model.load(new Deck(JSON.parse(Store.get("aurganise-" + JSON.parse(Store.get("aurganise-deckList"))[0]))));
+    */
     Model.init();
     
     document.addEventListener("contextmenu", function(e) {
