@@ -16,7 +16,7 @@ padding: 0;
 button {
     background: none;
     border: none;
-    font-family: Arial;
+    font-family: Tahoma;
     height: 34px;
     width: 34px;
     line-height: 34px;
@@ -138,7 +138,7 @@ Deck.prototype.remItem = function(index) {
 var Model = {
     decks: [],
     deck: null,
-    init: function() { // REMOVE Store FROM Model!!!
+    init: function() { // todo REMOVE Store FROM Model!!!
         if (Store.get("aurganise-deckList"))
             for (var i=0; i<JSON.parse(Store.get("aurganise-deckList")).length; i++)
                 this.decks.push(new Deck(JSON.parse(Store.get("aurganise-" + JSON.parse(Store.get("aurganise-deckList"))[i]))));
@@ -148,7 +148,7 @@ var Model = {
         PubSub.publish("deck", "init", this.deck, this.decks);
     },
     newDeck: function() {
-        var name = (window.prompt("Name of the new deck:")||"").replace(/^\s+|\s+$/gm, '');
+        var name = (window.prompt("Name of the new deck:")||"").replace(/^\s+|\s+$/gm, '').replace(/\s+/gm, '_');
         if (!name) return;
         this.decks.push(new Deck(name));
         this.deck = this.decks[this.decks.length - 1];
@@ -181,7 +181,7 @@ var Model = {
     }
 };
 
-var tabModel = {
+var tabModel = { // 10/4/2016 - not used?
     names: [],
     load: function(list) {
         var l = list.length;
@@ -269,6 +269,8 @@ var View = {
             var span = document.createElement('span');
             span.className = "deck";
             span.innerHTML = decks[l].name;
+            if (decks[l].name === deck.name)
+                span.style.backgroundColor = "#d4d4d4";
             document.getElementById('footer').insertBefore(span, document.getElementById('newDeck').nextSibling);
         }
         var l = deck.items.length;
@@ -334,7 +336,7 @@ function start() {
         Store.set("aurganise-version", 0.1);
     if (!Store.get("aurganise-deckList"))
         Store.set("aurganise-deckList", ["Deck1"]);
-    /*
+    /* 10/4/2016 - have no idea what this was supposed to do...
     if (Store.get("aurganise-deckList").length > 2)
         Model.load(new Deck(JSON.parse(Store.get("aurganise-" + JSON.parse(Store.get("aurganise-deckList"))[0]))));
     */
