@@ -1,0 +1,20 @@
+/* style.css */
+body {
+    font-family: Arial, sans-serif;
+}
+
+.container {
+    display: flex;
+}
+
+.controls {
+    padding: 20px;
+}
+
+.hex-grid {
+    background-color: white;
+    border: 1px solid black;
+    position: relative;
+}
+
+/* Add more CSS to style the hex grid, shapes, and input controls */

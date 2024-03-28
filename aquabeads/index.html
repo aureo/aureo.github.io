@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Hex Grid Interactive</title>
+    <link rel="stylesheet" type="text/css" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <div class="controls">
+            <label>Grid size:</label>
+            <input type="number" id="rows" value="10" size="3">x
+            <input type="number" id="columns" value="10" size="3"><br>
+            <label>Cell Size:</label>
+            <input type="number" id="hexSize" value="10" size="3"><br>
+            <label>Shape:</label>
+            <select id="shapePicker">
+                <option value="circle">Circle</option>
+                <option value="octagon">Octagon</option>
+                <option value="star">8-Point Star</option>
+            </select><br>
+            <label>Color:</label>
+            <input type="color" id="colorPicker">
+        </div>
+        <div class="hex-grid" id="hexGrid">
+          <svg id="svg" version="1.1" width="600" height="600" xmlns="http://www.w3.org/2000/svg">
+          </svg>
+        </div>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>
