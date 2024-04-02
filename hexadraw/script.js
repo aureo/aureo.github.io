@@ -47,7 +47,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 polygon.setAttribute('points', hexPoints(x, y, size));
 
                 polygon.addEventListener('click', function (event) {
-                    event.target.style.boxShadow = '0 0 5px blue inset';
+                    const shape = document.getElementById('shapePicker').value;
+                    const color = document.getElementById('colorPicker').value;
+                    event.target.style.fill = color;
                 }, false);
 
                 svg.appendChild(polygon);
@@ -58,8 +60,8 @@ document.addEventListener('DOMContentLoaded', function() {
     // Event listener for hex cell click
     hexGrid.addEventListener('click', function(event) {
         if (event.target.classList.contains('hex-cell')) {
-            const shape = document.getElementById('shapePicker').value;
-            const color = document.getElementById('colorPicker').value;
+
+
             
             // Add logic to draw, replace, or remove the shape based on the conditions
             // You'll likely need to store some data on the cell to track its state
