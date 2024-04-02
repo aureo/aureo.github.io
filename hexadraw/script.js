@@ -93,7 +93,6 @@ document.addEventListener('DOMContentLoaded', function() {
                     var e = document.getElementById(id);
                     if (e != null) e.remove();
 
-                    console.log(shape);
                     if (shape == "circle") {
                         var element = document.createElementNS("http://www.w3.org/2000/svg", "circle");
                         element.id = id;
