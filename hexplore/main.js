@@ -3,7 +3,7 @@ const ctx = canvas.getContext('2d');
 
 const a = 2 * Math.PI / 6;
 const sqrt3 = Math.sqrt(3);
-const hex_size = 3;
+const hex_size = 5;
 
 let cameraX = 0;
 let cameraY = 0;
@@ -28,6 +28,8 @@ const permutation = generatePermutation(permutation_size);
 function init() {
     canvas.width = window.innerWidth - 2 * parseInt(window.getComputedStyle(document.body).getPropertyValue('margin-left'));
     canvas.height = window.innerHeight - 2 * parseInt(window.getComputedStyle(document.body).getPropertyValue('margin-top'));
+
+    console.log("PRNG seed: " + randomGenerator.seed);
 
     drawGrid();
 }
@@ -96,10 +98,9 @@ function getColor(x, y) {
 
     let noise = 0;
     for (var i = 0; i < octaves; i++) {
-        noise += 1/(2**i) * getNoise({x: (x+100)/freq, y: y/freq});
+        noise += 1/(2 ** i) * getNoise({x: (x+100)/freq, y: y/freq});
         freq /= 2;
     }
-    //console.log("noise " + noise);
     
     if (noise < 0.2) return `rgb(0, 0, ${128})`;
     if (noise < 0.25) return `rgb(64, 64, ${128})`;
@@ -192,24 +193,33 @@ function drawGrid() {
     }
 }
 
-canvas.addEventListener('mousedown', (e) => {
+function dragStart(e) {
     isDragging = true;
-    dragStartX = e.clientX;
-    dragStartY = e.clientY;
+    dragStartX = e.pageX;
+    dragStartY = e.pageY;
     cameraStartX = cameraX;
     cameraStartY = cameraY;
-});
-
-canvas.addEventListener('mousemove', (e) => {
+}
+function dragMove(e) {
     if (!isDragging) return;
-    const dx = e.clientX - dragStartX;
-    const dy = e.clientY - dragStartY;
+    const dx = e.pageX - dragStartX;
+    const dy = e.pageY - dragStartY;
     cameraX = cameraStartX - dx; 
     cameraY = cameraStartY - dy;
     drawGrid();
-});
-
-canvas.addEventListener('mouseup', () => {
+}
+function dragEnd(e) {
     isDragging = false;
-});
+}
 
+function touchStart(e) { dragStart(e.touches[0]); }
+function touchMove(e) { dragMove(e.touches[0]); e.preventDefault(); }
+function touchEnd(e) { dragEnd(e.changedTouches[0]); }
+
+canvas.addEventListener('touchstart', touchStart, false);
+canvas.addEventListener('touchmove', touchMove, false);
+canvas.addEventListener('touchend', touchEnd, false);
+
+canvas.addEventListener('mousedown', dragStart, false);
+canvas.addEventListener('mousemove', dragMove, false);
+canvas.addEventListener('mouseup', dragEnd, false);
